@@ -129,6 +129,7 @@ dmypy.json
 .pyre/
 
 # Extra files to ignore:
+db/*
 pictures/*
 faces/*
 samples/*
