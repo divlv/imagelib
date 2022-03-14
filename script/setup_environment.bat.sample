@@ -5,11 +5,13 @@ rem It contains sensitive information, secrets, necessary access keys etc.
 rem Add it to ".gitignore"
 rem ######################################################################
 
-rem Service key for accessing the Azure Cognitive API
+rem Service key for accessing the Azure Cognitive API:
+
 set AZURE_SERVICE_DESCRIPTION_KEY=blah-blah-blah-blah-blah-blah
 set AZURE_SERVICE_FACE_API_KEY=blah-blah-blah-blah-blah-blah
 
-rem PostgreSQL connection data
+rem PostgreSQL connection data:
+
 set POSTGRES_HOST=my.super.host.com
 set POSTGRES_PORT=5432
 set POSTGRES_USER=mypguser
