@@ -127,3 +127,25 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Extra files to ignore:
+pictures/*
+faces/*
+samples/*
+**/*.idea/
+*/.idea/*
+**/*.bak
+**/*.jpg
+**/*.png
+*.iml
+*workspace*
+
+**/setup_environment.bat
+**/*vscode*
+
+# Keep some stuff...
+!.gitignore
+!pictures/.gitkeep
+!faces/.gitkeep
+!db/.gitkeep
+!samples/.gitkeep
