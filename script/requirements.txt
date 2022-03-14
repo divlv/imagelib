@@ -1,0 +1,9 @@
+pickledb
+simplejson
+requests
+pillow
+python-resize-image
+asyncio
+asyncpg
+geopy
+PyPubSub

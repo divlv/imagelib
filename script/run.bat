@@ -1,3 +1,4 @@
+@echo off
 call setup_environment
 
-python describe_images.py
+python process_images.py
