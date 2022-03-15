@@ -1,6 +1,7 @@
 #
 import datetime
 import string
+import globals
 from PIL import Image
 from PIL.ExifTags import TAGS
 from PIL.ExifTags import GPSTAGS
@@ -15,6 +16,16 @@ class ExifDataExtractor(ilmodule.ILModule):
     def __init__(self):
         super().__init__()
         self.printable = set(string.printable)
+        self.getMessageBus().subscribe(self.onMessage, globals.TOPIC_EXIF)
+
+    def onMessage(self, arg):
+        self.getLogger().debug("444444444444444444444444 Received message: " + str(arg))
+        # # Prevent too many requests to the API
+        # self.getLogger().debug(
+        #     "Prevent too many requests to the API. Waiting for 5 seconds..."
+        # )
+        # time.sleep(5)
+        # self.describeImage(arg)
 
     def get_decimal_from_dms(self, dms, ref):
         degrees = dms[0]

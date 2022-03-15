@@ -4,9 +4,11 @@ from PIL import Image
 from resizeimage import resizeimage
 import os
 import hashlib
+# import asyncio
 
 # Using Publish-Subscribe pattern to decouple the processing code
 from pubsub import pub
+# import nest_asyncio
 
 
 # The ILModule is a basic class for all the objects that are used in the Image Library project
@@ -23,8 +25,20 @@ class ILModule:
         self.picture_resize_width = 1024
 
         self.HTTP_OK = 200
+        # Enable nested loops
+        # nest_asyncio.apply()
+
+        # self.loop = asyncio.new_event_loop()
+        # asyncio.set_event_loop(self.loop)
 
         self.pub = pub
+
+    # async def broadcastMessage(self, topic, data):
+    #     self.getMessageBus().sendMessage(topic, arg=data)
+
+
+    def get_bytes_from_file(self, filename):
+        return open(filename, "rb").read()
 
     def getLogger(self):
         return self.log
@@ -55,7 +69,7 @@ class ILModule:
             img = resizeimage.resize_width(img, self.picture_resize_width)
             img.save(self.tmp_file, img.format)
             data = open(self.tmp_file, "rb").read()
-            self.log.debug("Resized to" + str(len(data)) + "bytes")
+            self.log.debug("Resized to " + str(len(data)) + "bytes")
 
         return data
 
@@ -86,3 +100,10 @@ class ILModule:
         except:
             # TMP file was not created
             pass
+
+    def checkEnvironmentVariableExists(self, envVarName):
+        if envVarName in os.environ and not os.environ[envVarName] == "":
+            return True
+        else:
+            print("Environment variable: %s is needed" % envVarName)
+            exit(1)

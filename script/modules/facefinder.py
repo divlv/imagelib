@@ -4,13 +4,14 @@ import requests
 import os
 import time
 import pickledb
+import globals
 
 
 class FaceFinder(ilmodule.ILModule):
     def __init__(self):
         super().__init__()
 
-        self.people_db = "g:\Projects\imagelib\db\people.pdb"
+        self.people_db = "g:\Projects\imagelib_github\db\people.pdb"
         self.db = pickledb.load(self.people_db, False)
 
         self.face_api_url_prefix = (
@@ -19,18 +20,26 @@ class FaceFinder(ilmodule.ILModule):
 
         self.face_api_service_key = os.environ["AZURE_SERVICE_FACE_API_KEY"]
         self.person_group = "ourfaces"
-        self.getMessageBus().subscribe(self.onMessage, "topic1")
+        self.getMessageBus().subscribe(self.onMessage, globals.TOPIC_FIND_FACE)
 
     def onMessage(self, arg):
-        self.log.info("Received message: " + str(arg))
+        self.getLogger().debug("Received message: " + str(arg))
+        # Prevent too many requests to the API
+        self.getLogger().debug(
+            "Prevent too many requests to the API. Waiting for 2 seconds..."
+        )
+        time.sleep(2)
+        self.findFacesOnPicture(arg)
 
     def extractFileName(self, filePath):
         return os.path.basename(filePath)
 
-    def findFacesOnPicture(self, sourceFile):
+    def findFacesOnPicture(self, image_data):
 
-        self.log.info("Finding faces on picture: " + str(sourceFile))
-        self.log.debug("Using people database from: " + self.people_db)
+        sourceFile = image_data["image_path"]
+
+        self.getLogger().info("Finding faces on picture: " + str(sourceFile))
+        self.getLogger().debug("Using people database from: " + self.people_db)
 
         face_detect_url = self.face_api_url_prefix + "/detect"
         # No "targetFace" means there is only one face detected in the entire image !
@@ -55,11 +64,10 @@ class FaceFinder(ilmodule.ILModule):
                 faces = response.json()
                 for f in faces:
                     faceIds.append(f["faceId"])
-                self.log.debug("Faces on picture:" + str(faceIds))
+                self.getLogger().debug("Faces on picture:" + str(faceIds))
             else:
-                self.log.error("Error finding faces! " + response.text)
+                self.getLogger().error("Error finding faces! " + response.text)
 
-            self.log.debug("Preserve rate limit... (sleep(1))")
             time.sleep(1)
             #
             #
@@ -80,21 +88,29 @@ class FaceFinder(ilmodule.ILModule):
                     },
                 )
                 if r.status_code == self.HTTP_OK:
-                    self.log.debug("Some face(s) identified.")
+                    self.getLogger().debug("Some face(s) identified.")
                     identifiedFaces = r.json()
                     for idf in identifiedFaces:
                         for candidate in idf["candidates"]:
-                            self.log.debug(
+                            self.getLogger().debug(
                                 "Detected: " + self.db.get(candidate["personId"])
                             )
                             facesOnPicture.append(self.db.get(candidate["personId"]))
+
+                    image_data["faces"] = facesOnPicture
+                    self.getMessageBus().sendMessage(
+                        globals.TOPIC_DESCRIBE_IMAGE, arg=image_data
+                    )
+                    # self.loop.run_until_complete(
+                    #     self.broadcastMessage(globals.TOPIC_DESCRIBE_IMAGE, image_data)
+                    # )
+
                 else:
-                    self.log.error("Error response code: " + str(r.status_code))
-                    self.log.error(r.text)
+                    self.getLogger().error("Error response code: " + str(r.status_code))
+                    self.getLogger().error(r.text)
             else:
-                self.log.warning("No faces on photo.")
+                self.getLogger().warning("No faces on photo.")
         except Exception as e:
-            self.log.error("Error: " + str(e))
+            self.getLogger().error("Error: " + str(e))
         finally:
             self.cleanupTmp()
-            return facesOnPicture
