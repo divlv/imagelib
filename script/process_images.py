@@ -6,6 +6,7 @@ from modules import thumbnailer
 from modules import describeimg
 from modules import exifdata
 from modules import reversegc
+from modules import textonpic
 import sys
 import glob
 import os
@@ -22,6 +23,7 @@ class Main(ilmodule.ILModule):
         self.di = describeimg.DescribeImage()
         self.ex = exifdata.ExifDataExtractor()
         self.gc = reversegc.ReverseGeoCoder()
+        self.tx = textonpic.TextOnPicture()
 
     def run(self):
 
@@ -54,9 +56,14 @@ class Main(ilmodule.ILModule):
                 #     )
                 # )
 
+                # Full processing....
                 self.getMessageBus().sendMessage(
                     globals.TOPIC_THUMBNAIL, arg={"image_path": image_path}
                 )
+
+                # self.getMessageBus().sendMessage(
+                #     globals.TOPIC_TEXT, arg={"image_path": image_path}
+                # )
 
         #         thumbnail = thumbnailer.makeImageThumbnail(image_path)
 
