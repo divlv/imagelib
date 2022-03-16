@@ -1,6 +1,7 @@
 #
 import datetime
 import string
+import time
 import globals
 from PIL import Image
 from PIL.ExifTags import TAGS
@@ -16,16 +17,29 @@ class ExifDataExtractor(ilmodule.ILModule):
     def __init__(self):
         super().__init__()
         self.printable = set(string.printable)
-        self.getMessageBus().subscribe(self.onMessage, globals.TOPIC_EXIF)
+        self.getMessageBus().subscribe(self.onMessageExif, globals.TOPIC_EXIF)
+        self.getMessageBus().subscribe(self.onMessageGps, globals.TOPIC_GPS)
 
-    def onMessage(self, arg):
-        self.getLogger().debug("444444444444444444444444 Received message: " + str(arg))
-        # # Prevent too many requests to the API
-        # self.getLogger().debug(
-        #     "Prevent too many requests to the API. Waiting for 5 seconds..."
-        # )
-        # time.sleep(5)
-        # self.describeImage(arg)
+    def onMessageExif(self, arg):
+        sourceFile = arg["image_path"]
+        self.log.debug("Reading EXIF data from: " + sourceFile)
+
+        imageExif = self.get_exif(sourceFile)
+        processedExifData = self.get_labeled_exif(imageExif)
+
+        keysToDelete = ["GPSInfo"]
+        # Cleanup unnecessary keys
+        for key in keysToDelete:
+            if key in processedExifData:
+                del processedExifData[key]
+
+        arg["EXIF"] = processedExifData
+
+        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+        print(arg)
+
+    def onMessageGps(self, arg):
+        self.getImageGPSData(arg)
 
     def get_decimal_from_dms(self, dms, ref):
         degrees = dms[0]
@@ -121,15 +135,31 @@ class ExifDataExtractor(ilmodule.ILModule):
 
         return labeled
 
-    def getImageGPSData(self, sourceFile):
-        self.log.debug("Reading image data from: " + sourceFile)
+    def getImageGPSData(self, image_data):
+        sourceFile = image_data["image_path"]
+        self.log.debug("Reading GPS data from: " + sourceFile)
 
         gpsdata = {}
         try:
             exif = self.get_exif(sourceFile)
             gpsdata = self.get_geotagging(exif)
+
+            neededGpsDataKeys = [
+                "GPSLatitudeRef",
+                "GPSLatitude",
+                "GPSLongitudeRef",
+                "GPSLongitude",
+                "GPSAltitude",
+                "GPSTimeStamp",
+                "GPSDateStamp",
+            ]
+            # Keep only needed keys:
+            gpsdata = {key: gpsdata[key] for key in neededGpsDataKeys if key in gpsdata}
+
+            image_data["gps"] = gpsdata
+
         except:
             self.log.error("Error reading image data")
             self.log.warn("Proceeding with EMPTY EXIF/GPS data")
-
-        return gpsdata
+        finally:
+            self.getMessageBus().sendMessage(globals.TOPIC_EXIF, arg=image_data)

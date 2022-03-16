@@ -51,8 +51,9 @@ class Main(ilmodule.ILModule):
                 #     )
                 # )
 
-                self.getMessageBus().sendMessage(globals.TOPIC_THUMBNAIL, arg={"image_path": image_path})
-
+                self.getMessageBus().sendMessage(
+                    globals.TOPIC_THUMBNAIL, arg={"image_path": image_path}
+                )
 
         #         thumbnail = thumbnailer.makeImageThumbnail(image_path)
 
@@ -131,8 +132,8 @@ class Main(ilmodule.ILModule):
         #         imagedb.saveImageData(
         #             imageDataJSON, processedGPSdata, processedExifData, thumbnail
         #         )
-        # else:
-        #     face.getLogger().info("No [more] images found in directory: " + images_dir)
+        else:
+            self.getLogger().info("No [more] images found in directory: " + images_dir)
 
 
 if __name__ == "__main__":

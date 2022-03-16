@@ -40,7 +40,6 @@ class DescribeImage(ilmodule.ILModule):
             }
             params = {}  # passed in URL
 
-
             image_bytes = self.getImageData(sourceFile)
 
             response = requests.post(
@@ -66,10 +65,9 @@ class DescribeImage(ilmodule.ILModule):
                     "text"
                 ]
 
-            self.getMessageBus().sendMessage(globals.TOPIC_EXIF, arg=image_data)
+            self.getMessageBus().sendMessage(globals.TOPIC_GPS, arg=image_data)
 
         except Exception as e:
             self.getLogger().error(str(e))
         finally:
             self.cleanupTmp()
-

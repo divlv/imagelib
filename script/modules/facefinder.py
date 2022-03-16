@@ -98,12 +98,6 @@ class FaceFinder(ilmodule.ILModule):
                             facesOnPicture.append(self.db.get(candidate["personId"]))
 
                     image_data["faces"] = facesOnPicture
-                    self.getMessageBus().sendMessage(
-                        globals.TOPIC_DESCRIBE_IMAGE, arg=image_data
-                    )
-                    # self.loop.run_until_complete(
-                    #     self.broadcastMessage(globals.TOPIC_DESCRIBE_IMAGE, image_data)
-                    # )
 
                 else:
                     self.getLogger().error("Error response code: " + str(r.status_code))
@@ -114,3 +108,6 @@ class FaceFinder(ilmodule.ILModule):
             self.getLogger().error("Error: " + str(e))
         finally:
             self.cleanupTmp()
+            self.getMessageBus().sendMessage(
+                globals.TOPIC_DESCRIBE_IMAGE, arg=image_data
+            )
