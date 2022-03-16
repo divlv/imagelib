@@ -35,11 +35,7 @@ class TextOnPicture(ilmodule.ILModule):
         return text
 
     def findTextOnImage(self, image_data):
-
         sourceFile = image_data["image_path"]
-        # image_data["description"] = ""
-        # image_data["tags"] = []
-
         self.getLogger().info("Finding text on image: " + str(sourceFile))
         try:
             headers = {
@@ -87,20 +83,7 @@ class TextOnPicture(ilmodule.ILModule):
 
             print(image_data)
 
-            # if "error" in analysis:
-            #     raise Exception(analysis["error"]["message"])
-
-            # self.getLogger().debug(str(analysis["description"]))
-
-            # if "tags" in analysis["description"]:
-            #     image_data["tags"] = analysis["description"]["tags"]
-
-            # if analysis["description"]["captions"]:
-            #     image_data["description"] = analysis["description"]["captions"][0][
-            #         "text"
-            #     ]
-
-            # self.getMessageBus().sendMessage(globals.TOPIC_GPS, arg=image_data)
+            # self.getMessageBus().sendMessage(globals.TOPIC_???????, arg=image_data)
 
         except Exception as e:
             self.getLogger().error(str(e))
