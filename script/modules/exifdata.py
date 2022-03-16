@@ -35,8 +35,7 @@ class ExifDataExtractor(ilmodule.ILModule):
 
         arg["EXIF"] = processedExifData
 
-        print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-        print(arg)
+        self.getMessageBus().sendMessage(globals.TOPIC_REVERSE_GEO, arg=arg)
 
     def onMessageGps(self, arg):
         self.getImageGPSData(arg)

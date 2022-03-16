@@ -1,7 +1,9 @@
 import json
 import requests
+import time
 import codecs
 import re
+import globals
 from modules import ilmodule
 from unicodedata import normalize
 
@@ -14,6 +16,16 @@ class ReverseGeoCoder(ilmodule.ILModule):
         super().__init__()
         self.punct_re = re.compile(r'[\t !"#$%&\'()*\-/<=>?@\[\\\]^_`{|},.:]+')
         self.reverseGeoCodingUrlTemplate = "https://nominatim.openstreetmap.org/reverse?&accept-language=en&format=json&lat=%s&lon=%s&zoom=18&addressdetails=1"
+        self.getMessageBus().subscribe(self.onMessage, globals.TOPIC_REVERSE_GEO)
+
+    def onMessage(self, arg):
+        self.getLogger().debug("Received message: " + str(arg))
+        # Prevent too many requests to the API
+        self.getLogger().debug(
+            "Prevent too many requests to the API. Waiting for 1 seconds..."
+        )
+        time.sleep(1)
+        self.getAddressByGPS(arg)
 
     def deaccent(self, text, delim=" "):
         """Generates an slightly worse ASCII-only slug."""
@@ -40,24 +52,48 @@ class ReverseGeoCoder(ilmodule.ILModule):
         except UnicodeDecodeError:
             print("Could not decode buffer: %s" % buffer)
 
-    def getAddressByGPS(self, latitude, longitude) -> json:
-        self.log.debug(
-            "Called ReverseGeoCoder.getAddressByGPS(%s, %s)" % (latitude, longitude)
-        )
+    def getAddressByGPS(self, image_data):
 
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"
-        }
-        url = self.reverseGeoCodingUrlTemplate % (latitude, longitude)
+        # print(image_data)
+        # Check "gps" key in the image_data
+        if "gps" in image_data:
+            latitude = image_data["gps"]["GPSLatitude"]
+            longitude = image_data["gps"]["GPSLongitude"]
 
-        response = requests.get(url, headers=headers)
-
-        if response.status_code == self.HTTP_OK:
-            self.log.debug("Response.text: " + response.text)
-            return json.loads(response.text)
+        if not latitude or not longitude:
+            self.getLogger().debug("No GPS data found in image")
         else:
-            self.log.error(
-                "Cannot get data from Nominatim. Error response code: "
-                + str(response.status_code)
+            self.getLogger().debug(
+                "Called ReverseGeoCoder.getAddressByGPS(%s, %s)" % (latitude, longitude)
             )
-            return {}
+
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"
+            }
+            url = self.reverseGeoCodingUrlTemplate % (latitude, longitude)
+
+            response = requests.get(url, headers=headers)
+
+            if response.status_code == self.HTTP_OK:
+                self.getLogger().debug("Response.text: " + response.text)
+
+                nominatim = json.loads(response.text)
+
+                address = {}
+                if "address" in nominatim:
+                    address = nominatim["address"]
+
+                display_name = ""
+                if "display_name" in nominatim:
+                    display_name = nominatim["display_name"]
+
+                image_data["address"] = address
+                image_data["display_name"] = display_name
+
+            else:
+                self.getLogger().error(
+                    "Cannot get data from Nominatim. Error response code: "
+                    + str(response.status_code)
+                )
+
+        self.getMessageBus().sendMessage(globals.TOPIC_TEXT, arg=image_data)

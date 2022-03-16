@@ -5,6 +5,7 @@ from modules import facefinder
 from modules import thumbnailer
 from modules import describeimg
 from modules import exifdata
+from modules import reversegc
 import sys
 import glob
 import os
@@ -20,6 +21,7 @@ class Main(ilmodule.ILModule):
         self.tt = thumbnailer.Thumbnailer()
         self.di = describeimg.DescribeImage()
         self.ex = exifdata.ExifDataExtractor()
+        self.gc = reversegc.ReverseGeoCoder()
 
     def run(self):
 
