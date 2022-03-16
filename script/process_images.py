@@ -6,6 +6,7 @@ from modules import thumbnailer
 from modules import describeimg
 from modules import exifdata
 import sys
+import glob
 import os
 import re
 import globals
@@ -135,7 +136,12 @@ class Main(ilmodule.ILModule):
         else:
             self.getLogger().info("No [more] images found in directory: " + images_dir)
 
+    def deleteFilesByMask(self, mask):
+        for filename in glob.glob(mask):
+            os.remove(filename)
+
 
 if __name__ == "__main__":
     main = Main()
     main.run()
+    main.deleteFilesByMask("./tmb_*.jpg")
