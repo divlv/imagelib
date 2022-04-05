@@ -81,9 +81,10 @@ class TextOnPicture(ilmodule.ILModule):
             image_data["text_en"] = text_en
             image_data["text_ru"] = text_ru
 
-            print(image_data)
+            self.getLogger().debug("Text on image EN: " + str(text_en))
+            self.getLogger().debug("Text on image RU: " + str(text_ru))
 
-            # self.getMessageBus().sendMessage(globals.TOPIC_???????, arg=image_data)
+            self.getMessageBus().sendMessage(globals.TOPIC_DATE, arg=image_data)
 
         except Exception as e:
             self.getLogger().error(str(e))

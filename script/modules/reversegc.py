@@ -56,7 +56,10 @@ class ReverseGeoCoder(ilmodule.ILModule):
 
         # print(image_data)
         # Check "gps" key in the image_data
-        if "gps" in image_data:
+        latitude = ""
+        longitude = ""
+        
+        if "gps" in image_data and "GPSLatitude" in image_data["gps"] and "GPSLongitude" in image_data["gps"]:
             latitude = image_data["gps"]["GPSLatitude"]
             longitude = image_data["gps"]["GPSLongitude"]
 

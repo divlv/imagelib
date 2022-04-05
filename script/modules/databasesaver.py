@@ -1,160 +1,140 @@
 #
 from modules import ilmodule
-import requests
-import re
 import time
 from time import mktime
 from datetime import datetime
+
+import uuid
 import json
+import os
+import psycopg2
+import psycopg2.extras
+from psycopg2 import pool
+
+
 import globals
 
 #
-# Try to determine the actual date of the picture. By metadata, filename, etc,
-# Assuming all the EXIF data was already extracted previously.
-# Place this step of processing - one of the latest (i.e. after EXIF, GPS, etc.)
+# Module for saving data to database
 #
-class DateOfPicture(ilmodule.ILModule):
+class Database(ilmodule.ILModule):
     def __init__(self):
         super().__init__()
 
-        self.getMessageBus().subscribe(self.onMessage, globals.TOPIC_DATE)
+        minConnection = 1
+        maxConnection = 2
+        self.connectionPool = psycopg2.pool.ThreadedConnectionPool(
+            minConnection,
+            maxConnection,
+            user=os.getenv("PGUSER"),
+            password=os.getenv("PGPASSWORD"),
+            host=os.getenv("PGHOST"),
+            port=os.getenv("PGPORT"),
+            database=os.getenv("PGDATABASE"),
+        )
+        if self.connectionPool:
+            print("DB Connection pool created successfully")
+
+        # By default DO NOT save DUPLICATES!
+        self.saveDuplicateImageData = False
+        
+        self.getMessageBus().subscribe(self.onMessage, globals.TOPIC_SAVEDB)
 
     def onMessage(self, arg):
-        self.getLogger().debug("Received topic date request: " + str(arg))
-        metadata = self.findDateOfImage(arg)
+        self.getLogger().debug("Received database save request")
 
-        # metadata["text_en"] = ""
-        # metadata["text_ru"] = ""
-
-        # Json pretty print
-        self.getLogger().info(json.dumps(metadata, indent=4))
-        self.saveJsonToFile(
-            json.dumps(metadata, indent=4),
-            "json_" + arg["hash"] + ".json",
-        )
-
+        self.saveImageData(arg)
         # self.getMessageBus().sendMessage(globals.TOPIC_???????, arg=metadata)
 
-    def loadJsonFromFile(self, filename):
-        with open(filename, "r") as f:
-            return json.load(f)
+    #
+    # Save image metadata to PostgreSQL database
+    #
+    def saveImageData(self, imageDataJSON):
 
-    def stringIsDateTime(self, str):
+        dbConnection = self.connectionPool.getconn()
+
         try:
-            time.strptime(str, "%Y:%m:%d %H:%M:%S")
-            return True
-        except ValueError:
-            return False
-
-    def stringIsDate(self, str):
-        try:
-            time.strptime(str, "%Y:%m:%d")
-            return True
-        except ValueError:
-            return False
-
-    def stringIsTime(self, str):
-        try:
-            time.strptime(str, "%H:%M:%S")
-            return True
-        except ValueError:
-            return False
-
-    def findDateOfImage(self, image_data):  # Getting the path to the image file.
-        try:
-            date_time = ""
-
-            # if DateTimeOriginal is not available, use DateTime
-            if "DateTimeOriginal" in image_data["EXIF"] and self.stringIsDateTime(
-                str(image_data["EXIF"]["DateTimeOriginal"]).replace(": ", ":")
-            ):
-                date_time = str(image_data["EXIF"]["DateTimeOriginal"]).replace(
-                    ": ", ":"
+            dbCursor = dbConnection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            # Delete old data, if exists
+            imageSha256 = imageDataJSON["hash"]
+            if not self.saveDuplicateImageData:
+                dbCursor.execute(
+                    "DELETE FROM image_lib WHERE left(filehash, 2)=%s AND filehash=%s",
+                    (imageSha256[:2], imageSha256),
                 )
+
+            if "GPSLatitude" in imageDataJSON["gps"] and imageDataJSON["gps"]["GPSLatitude"]:
+                GPSLatitude = imageDataJSON["gps"]["GPSLatitude"]
             else:
-                if "DateTime" in image_data["EXIF"] and self.stringIsDateTime(
-                    str(image_data["EXIF"]["DateTime"]).replace(": ", ":")
-                ):
-                    date_time = str(image_data["EXIF"]["DateTime"]).replace(": ", ":")
+                GPSLatitude = None
 
-            if date_time != "":
-                image_data["dateOfImage"] = date_time
-                return image_data
-
-            gps_time = ""
-            if "GPSTimeStamp" in image_data["gps"] and self.stringIsTime(
-                str(image_data["gps"]["GPSTimeStamp"]).replace(": ", ":")
-            ):
-                gps_time = str(image_data["gps"]["GPSTimeStamp"]).replace(": ", ":")
+            if "GPSLongitude" in imageDataJSON["gps"] and imageDataJSON["gps"]["GPSLongitude"]:
+                GPSLongitude = imageDataJSON["gps"]["GPSLongitude"]
             else:
-                gps_time = "00:00:01"
+                GPSLongitude = None
 
-            gps_date = ""
-            if "GPSDateStamp" in image_data["gps"] and self.stringIsDate(
-                str(image_data["gps"]["GPSDateStamp"]).replace(": ", ":")
-            ):
-                gps_date = str(image_data["gps"]["GPSDateStamp"]).replace(": ", ":")
-            else:
-                gps_date = ""
+            address = {}
+            if "address" in imageDataJSON:
+                address = imageDataJSON["address"]
 
-            # If there's no DATE - we're not interested in TIME.
-            if gps_date != "":
+            display_name = ""
+            if "display_name" in imageDataJSON:
+                display_name = imageDataJSON["display_name"]
 
-                gps_date_parsed = datetime.fromtimestamp(
-                    mktime(time.strptime(gps_date, "%Y:%m:%d"))
-                ).date()
+            thumbnailBytes = self.get_bytes_from_file(imageDataJSON["thumbnail_path"])
 
-                gps_time_parsed = datetime.strptime(gps_time, "%H:%M:%S").time()
+            originalname = os.path.basename(imageDataJSON["image_path"])
 
-                gps_date_parsed = datetime.combine(gps_date_parsed, gps_time_parsed)
+            fullDate = None
+            if imageDataJSON["dateOfImage"]:
+                d = time.strptime(imageDataJSON["dateOfImage"], "%Y:%m:%d %H:%M:%S")
+                fullDate = time.strftime('%Y-%m-%d %H:%M:%S', d)
 
-                image_data["dateOfImage"] = gps_date_parsed.strftime(
-                    "%Y:%m:%d %H:%M:%S"
-                )
-                return image_data
+            imageYear = None
+            imageMonth = None
+            imageDay = None
 
-            # If no date can be found in image_data, let's inspect the filename itself (the last hope)
+            # Generate GUID for DB record
+            guid = uuid.uuid1()
+            dbCursor.execute(
+                "INSERT INTO image_lib (guid, filehash, gpsdata, exifdata, latitude, longitude, address, address_full, faces, tags, originalname, description, thumbnail, imagedate, taken_at, imageyear, imagemonth, imageday) VALUES ("
+                "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (
+                    str(guid),
+                    str(imageSha256),
+                    json.dumps(imageDataJSON["gps"]),
+                    json.dumps(imageDataJSON["EXIF"]),
+                    GPSLatitude,
+                    GPSLongitude,
+                    json.dumps(address),
+                    display_name,
+                    json.dumps(imageDataJSON["faces"]),
+                    json.dumps(imageDataJSON["tags"]),
+                    originalname,
+                    imageDataJSON["description"],
+                    thumbnailBytes,
+                    fullDate,
+                    fullDate,
+                    imageYear,
+                    imageMonth,
+                    imageDay,
 
-            fileName = image_data["image_path"]
 
-            fullDateRegExp = re.search(
-                "((19|20)\d\d)([\-\._/]*)(0[1-9]|1[012])([\-\._/]*)(0[1-9]|[12][0-9]|3[01])([\-\._/\s]*)(0[0-9]|1[1-9]|2[1-3])([\-\._/\s]*)(0[0-9]|[1-5][1-9])([\-\._/\s]*)(0[0-9]|[1-5][1-9])",
-                fileName,
+
+
+
+                ),
             )
-            if fullDateRegExp:
-                d = datetime(
-                    int(fullDateRegExp.group(1)),
-                    int(fullDateRegExp.group(4)),
-                    int(fullDateRegExp.group(6)),
-                    int(fullDateRegExp.group(8)),
-                    int(fullDateRegExp.group(10)),
-                    int(fullDateRegExp.group(12)),
-                )
-                image_data["dateOfImage"] = d.strftime("%Y:%m:%d %H:%M:%S")
-                return image_data
 
-            dateOnlyRegExp = re.search(
-                "((19|20)\d\d)([\-\._/]*)(0[1-9]|1[012])([\-\._/]*)(0[1-9]|[12][0-9]|3[01])",
-                fileName,
-            )
-            if dateOnlyRegExp:
-                d = datetime(
-                    int(dateOnlyRegExp.group(1)),
-                    int(dateOnlyRegExp.group(4)),
-                    int(dateOnlyRegExp.group(6)),
-                    0,
-                    0,
-                    1,
-                )
-                image_data["dateOfImage"] = d.strftime("%Y:%m:%d %H:%M:%S")
-                return image_data
-            else:
-                self.getLogger().warning(
-                    "No DATE information found in picture file: " + str(fileName)
-                )
-                return image_data
-
+            dbConnection.commit()
+            dbCursor.close()
+            print("Data saved with GUID: " + str(guid))
         except Exception as e:
-            self.getLogger().error(str(e))
+            dbConnection.rollback()
+            # log.error("{} error: {}".format(func.__name__, e))
+            print(e)
+            # Throw exception to caller
+            raise e
         finally:
-            self.cleanupTmp()
+            self.connectionPool.putconn(dbConnection)
+        return

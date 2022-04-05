@@ -4,10 +4,12 @@ from PIL import Image
 from resizeimage import resizeimage
 import os
 import hashlib
+
 # import asyncio
 
 # Using Publish-Subscribe pattern to decouple the processing code
 from pubsub import pub
+
 # import nest_asyncio
 
 
@@ -36,7 +38,6 @@ class ILModule:
     # async def broadcastMessage(self, topic, data):
     #     self.getMessageBus().sendMessage(topic, arg=data)
 
-
     def get_bytes_from_file(self, filename):
         return open(filename, "rb").read()
 
@@ -45,6 +46,13 @@ class ILModule:
 
     def getMessageBus(self):
         return self.pub
+
+    def saveJsonToFile(self, json, filename):
+        """
+        Save a json object to a file
+        """
+        with open(filename, "w") as f:
+            f.write(json)
 
     def getImageData(self, sourceFile):
         """

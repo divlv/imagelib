@@ -22,9 +22,18 @@ class DateOfPicture(ilmodule.ILModule):
     def onMessage(self, arg):
         self.getLogger().debug("Received topic date request: " + str(arg))
         metadata = self.findDateOfImage(arg)
+
+        # metadata["text_en"] = ""
+        # metadata["text_ru"] = ""
+
         # Json pretty print
-        self.getLogger().info(json.dumps(metadata, indent=4, sort_keys=True))
-        # self.getMessageBus().sendMessage(globals.TOPIC_???????, arg=metadata)
+        self.getLogger().info(json.dumps(metadata, indent=4))
+        self.saveJsonToFile(
+            json.dumps(metadata, indent=4),
+            "json_" + arg["hash"] + ".json",
+        )
+
+        self.getMessageBus().sendMessage(globals.TOPIC_SAVEDB, arg=metadata)
 
     def loadJsonFromFile(self, filename):
         with open(filename, "r") as f:
@@ -70,8 +79,7 @@ class DateOfPicture(ilmodule.ILModule):
 
             if date_time != "":
                 image_data["dateOfImage"] = date_time
-                print(image_data)
-                return
+                return image_data
 
             gps_time = ""
             if "GPSTimeStamp" in image_data["gps"] and self.stringIsTime(

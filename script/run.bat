@@ -3,4 +3,4 @@ call setup_environment
 
 cls
 
-python process_images.py
+python process_images.py c:/delete

@@ -11,9 +11,10 @@ set AZURE_SERVICE_DESCRIPTION_KEY=blah-blah-blah-blah-blah-blah
 set AZURE_SERVICE_FACE_API_KEY=blah-blah-blah-blah-blah-blah
 
 rem PostgreSQL connection data:
+rem Variables naming adjusted for "asyncpg" library (See https://magicstack.github.io/asyncpg/current/api/index.html#asyncpg-api-pool)
 
-set POSTGRES_HOST=my.super.host.com
-set POSTGRES_PORT=5432
-set POSTGRES_USER=mypguser
-set POSTGRES_PASSWORD=mypgpassword
-set POSTGRES_DB=mypgdb
+set PGHOST=my.super.host.com
+set PGPORT=5432
+set PGUSER=mypguser
+set PGPASSWORD=mypgpassword
+set PGDATABASE=mypgdb

@@ -4,6 +4,6 @@ requests
 pillow
 python-resize-image
 asyncio
-asyncpg
+psycopg2
 geopy
 PyPubSub

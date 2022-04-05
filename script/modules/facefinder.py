@@ -48,6 +48,8 @@ class FaceFinder(ilmodule.ILModule):
         params = {"returnFaceId": "true"}
 
         facesOnPicture = []
+        # Default empty "placeholder"...
+        image_data["faces"] = facesOnPicture
         try:
             data = self.getImageData(sourceFile)
             headers = {

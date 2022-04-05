@@ -7,33 +7,39 @@ from modules import describeimg
 from modules import exifdata
 from modules import reversegc
 from modules import textonpic
+from modules import dateofpic
+from modules import databasesaver
 import sys
 import glob
 import os
 import re
 import globals
-import asyncio
+
 
 
 class Main(ilmodule.ILModule):
     def __init__(self):
         super().__init__()
+        # Create all the data processors...
         self.ff = facefinder.FaceFinder()
         self.tt = thumbnailer.Thumbnailer()
         self.di = describeimg.DescribeImage()
         self.ex = exifdata.ExifDataExtractor()
         self.gc = reversegc.ReverseGeoCoder()
         self.tx = textonpic.TextOnPicture()
+        self.da = dateofpic.DateOfPicture()
+        #
+        self.db = databasesaver.Database()
 
     def run(self):
 
         self.checkEnvironmentVariableExists("AZURE_SERVICE_DESCRIPTION_KEY")
         self.checkEnvironmentVariableExists("AZURE_SERVICE_FACE_API_KEY")
-        self.checkEnvironmentVariableExists("POSTGRES_HOST")
-        self.checkEnvironmentVariableExists("POSTGRES_PORT")
-        self.checkEnvironmentVariableExists("POSTGRES_USER")
-        self.checkEnvironmentVariableExists("POSTGRES_PASSWORD")
-        self.checkEnvironmentVariableExists("POSTGRES_DB")
+        self.checkEnvironmentVariableExists("PGHOST")
+        self.checkEnvironmentVariableExists("PGPORT")
+        self.checkEnvironmentVariableExists("PGUSER")
+        self.checkEnvironmentVariableExists("PGPASSWORD")
+        self.checkEnvironmentVariableExists("PGDATABASE")
 
         self.getLogger().info("Starting main loop")
 
@@ -62,7 +68,7 @@ class Main(ilmodule.ILModule):
                 )
 
                 # self.getMessageBus().sendMessage(
-                #     globals.TOPIC_TEXT, arg={"image_path": image_path}
+                #     globals.TOPIC_DATE, arg={"image_path": image_path}
                 # )
 
         #         thumbnail = thumbnailer.makeImageThumbnail(image_path)
@@ -146,6 +152,10 @@ class Main(ilmodule.ILModule):
             self.getLogger().info("No [more] images found in directory: " + images_dir)
 
     def deleteFilesByMask(self, mask):
+        for filename in glob.glob(mask):
+            os.remove(filename)
+
+    def closeDatabaseIfOpened(self):
         for filename in glob.glob(mask):
             os.remove(filename)
 
