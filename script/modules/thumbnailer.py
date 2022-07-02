@@ -49,7 +49,9 @@ class Thumbnailer(ilmodule.ILModule):
             if r.status_code == 200:
                 nameOnly = "./" + os.path.basename(sourceFile).replace(" ", "_")
                 fname, ext = os.path.splitext(nameOnly)
-                outputThumbnailFile = "./tmb_" + hash + ".jpg"
+                outputThumbnailFile = (
+                    os.environ["TEMPORARY_DIR"] + "\\" + "tmb_" + hash + ".jpg"
+                )
                 with open(outputThumbnailFile, "wb") as f:
                     r.raw.decode_content = True
                     shutil.copyfileobj(r.raw, f)

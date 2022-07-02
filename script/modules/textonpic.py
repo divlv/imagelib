@@ -28,10 +28,12 @@ class TextOnPicture(ilmodule.ILModule):
 
     def concatenateTextPieces(self, json_structure):
         text = ""
-        for region in json_structure["regions"]:
-            for line in region["lines"]:
-                for word in line["words"]:
-                    text += word["text"] + " "
+
+        if "regions" in json_structure:
+            for region in json_structure["regions"]:
+                for line in region["lines"]:
+                    for word in line["words"]:
+                        text += word["text"] + " "
         return text
 
     def findTextOnImage(self, image_data):

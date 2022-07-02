@@ -1,9 +1,11 @@
 
-drop table image_lib;
+drop table if exists image_lib;
 
 CREATE TABLE image_lib
 (
    id BIGSERIAL PRIMARY KEY,
+   remote_id VARCHAR(128),
+   remote_url varchar(255),
    guid uuid,
    filehash char(64),
    faces jsonb,
@@ -18,16 +20,19 @@ CREATE TABLE image_lib
    imagemonth int,
    imageday int,
    imagedate date,
-   originalname char(64),
+   originalname varchar(512),
    description text,
    textonpic text,
    thumbnail bytea,
    sourcepath text,
+   searchtext text,
    taken_at timestamp,
    insdat timestamp DEFAULT now() NOT NULL
 );
 
 COMMENT ON COLUMN image_lib.id IS 'Autoincrement';
+COMMENT ON COLUMN image_lib.remote_id IS 'Unique ID in remote system, if any';
+COMMENT ON COLUMN image_lib.remote_url IS 'If there is a remote URL to download/view original from';
 COMMENT ON COLUMN image_lib.guid IS 'Unique file GUID for sharing, etc.';
 COMMENT ON COLUMN image_lib.filehash IS 'SHA256 hash of current file for duplicates detection';
 COMMENT ON COLUMN image_lib.faces IS 'Faces(names), detected on pic';
@@ -47,6 +52,7 @@ COMMENT ON COLUMN image_lib.description IS 'Description of picture (by cognitive
 COMMENT ON COLUMN image_lib.textonpic IS 'Text, detected on picture';
 COMMENT ON COLUMN image_lib.thumbnail IS 'Image preview thumbnail';
 COMMENT ON COLUMN image_lib.sourcepath IS 'Image source path to download original from';
+COMMENT ON COLUMN image_lib.searchtext IS 'Combined text information of this image for search functionality';
 COMMENT ON COLUMN image_lib.taken_at IS 'Date/time when pic was taken, usually, from EXIF tag';
 COMMENT ON COLUMN image_lib.insdat IS 'Date/time of particular DB record';
 

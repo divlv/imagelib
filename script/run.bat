@@ -1,3 +1,4 @@
+TITLE Process images
 @echo off
 call setup_environment
 

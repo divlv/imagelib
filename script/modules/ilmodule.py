@@ -17,9 +17,11 @@ from pubsub import pub
 class ILModule:
     def __init__(self):
         self.log = logging.getLogger(self.__class__.__name__)
+
+        LOGLEVEL = os.environ.get("LOGLEVEL", "INFO").upper()
         logging.basicConfig(
             format="%(levelname)s: %(filename)s:%(lineno)s %(funcName)s: %(message)s",
-            level=logging.DEBUG,
+            level=LOGLEVEL,
         )
 
         self.tmp_file = "./~tmp.jpg"

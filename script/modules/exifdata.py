@@ -2,6 +2,7 @@
 import datetime
 import string
 import time
+import os
 import globals
 from PIL import Image
 from PIL.ExifTags import TAGS
@@ -22,16 +23,21 @@ class ExifDataExtractor(ilmodule.ILModule):
 
     def onMessageExif(self, arg):
         sourceFile = arg["image_path"]
-        self.log.debug("Reading EXIF data from: " + sourceFile)
+        filename, file_extension = os.path.splitext(sourceFile)
+        if file_extension.lower() == ".png":
+            self.log.warning("PNG files are not support EXIF: " + sourceFile)
+            processedExifData = {}
+        else:
+            self.log.debug("Reading EXIF data from: " + sourceFile)
 
-        imageExif = self.get_exif(sourceFile)
-        processedExifData = self.get_labeled_exif(imageExif)
+            imageExif = self.get_exif(sourceFile)
+            processedExifData = self.get_labeled_exif(imageExif)
 
-        keysToDelete = ["GPSInfo"]
-        # Cleanup unnecessary keys
-        for key in keysToDelete:
-            if key in processedExifData:
-                del processedExifData[key]
+            keysToDelete = ["GPSInfo"]
+            # Cleanup unnecessary keys
+            for key in keysToDelete:
+                if key in processedExifData:
+                    del processedExifData[key]
 
         arg["EXIF"] = processedExifData
 
@@ -52,7 +58,7 @@ class ExifDataExtractor(ilmodule.ILModule):
 
         return round(degrees + minutes + seconds, 5)
 
-    def get_geotagging(self, exif):
+    def get_geotagging(self, exif, image_data):
         geotagging = {}
 
         if not exif:
@@ -62,7 +68,9 @@ class ExifDataExtractor(ilmodule.ILModule):
         for (idx, tag) in TAGS.items():
             if tag == "GPSInfo":
                 if idx not in exif:
-                    self.log.warning("No EXIF geotagging found")
+                    self.log.warning(
+                        "No EXIF geotagging found in " + image_data["image_path"]
+                    )
                     return geotagging
 
                 for (key, val) in GPSTAGS.items():
@@ -135,13 +143,20 @@ class ExifDataExtractor(ilmodule.ILModule):
         return labeled
 
     def getImageGPSData(self, image_data):
+        gpsdata = {}
         sourceFile = image_data["image_path"]
+        filename, file_extension = os.path.splitext(sourceFile)
+        if file_extension.lower() == ".png":
+            self.log.warning("There is no GPS expected in PNG-file. Skip " + sourceFile)
+            image_data["gps"] = gpsdata
+            self.getMessageBus().sendMessage(globals.TOPIC_EXIF, arg=image_data)
+            return
+
         self.log.debug("Reading GPS data from: " + sourceFile)
 
-        gpsdata = {}
         try:
             exif = self.get_exif(sourceFile)
-            gpsdata = self.get_geotagging(exif)
+            gpsdata = self.get_geotagging(exif, image_data)
 
             neededGpsDataKeys = [
                 "GPSLatitudeRef",

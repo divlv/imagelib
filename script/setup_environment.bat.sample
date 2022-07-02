@@ -18,3 +18,18 @@ set PGPORT=5432
 set PGUSER=mypguser
 set PGPASSWORD=mypgpassword
 set PGDATABASE=mypgdb
+
+set RMQ_HOST=rabbit.example.com
+set RMQ_PORT=5672
+set RMQ_VIRTUALHOST=vrabbit
+set RMQ_TTL=3600000
+set RMQ_IN_QUEUE=sourceimagenames
+set RMQ_OUT_QUEUE=resultingimageinfo
+set RMQ_EXCHANGE=imageexchange
+set RMQ_PREFETCH_CHUNK=1
+set RMQ_USERNAME=vrabbit
+set RMQ_PASSWORD=rabbitmqPassWord
+
+set TEMPORARY_DIR=C:\Temp
+
+set LOGLEVEL=DEBUG

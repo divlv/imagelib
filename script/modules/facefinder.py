@@ -105,7 +105,9 @@ class FaceFinder(ilmodule.ILModule):
                     self.getLogger().error("Error response code: " + str(r.status_code))
                     self.getLogger().error(r.text)
             else:
-                self.getLogger().warning("No faces on photo.")
+                self.getLogger().warning(
+                    "No faces on photo: " + image_data["image_path"]
+                )
         except Exception as e:
             self.getLogger().error("Error: " + str(e))
         finally:
